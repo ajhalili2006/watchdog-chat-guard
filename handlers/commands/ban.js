@@ -52,11 +52,6 @@ const banHandler = async (ctx) => {
 		return ctx.replyWithHTML('ℹ️ <b>Can\'t ban other admins.</b>');
 	}
 
-	if (ctx.message.reply_to_message) {
-		ctx.deleteMessage(ctx.message.reply_to_message.message_id)
-			.catch(() => null);
-	}
-
 	if (!flags.has('amend') && userToBan.status === 'banned') {
 		return ctx.replyWithHTML(
 			html`🚫 ${displayUser(userToBan)} <b>is already banned.</b>`,
@@ -65,8 +60,9 @@ const banHandler = async (ctx) => {
 
 	return ctx.ban({
 		admin: ctx.from,
-		reason: await substom(reason),
+		reason: '[' + ctx.chat.title + '] ' + await substom(reason),
 		userToBan,
+		msg: ctx.message.reply_to_message
 	});
 };
 

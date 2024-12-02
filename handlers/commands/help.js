@@ -19,14 +19,14 @@ might be a better choice for you.
 `;
 
 /** @param { import('../../typings/context').ExtendedContext } ctx */
-const helpHandler = ({ chat, replyWithHTML }) => {
-	if (chat.type !== 'private') return null;
+const helpHandler = (ctx) => {
+	if (ctx.chat.type !== 'private') return null;
 
-	return replyWithHTML(
+	return ctx.replyWithHTML(
 		message,
 		Markup.inlineKeyboard([
-			Markup.urlButton('🛠 Setup a New Bot', homepage)
-		]).extra()
+			Markup.button.url('🛠 Setup a New Bot', homepage)
+		])
 	);
 };
 

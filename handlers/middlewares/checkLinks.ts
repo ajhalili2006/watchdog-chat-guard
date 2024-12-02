@@ -5,7 +5,6 @@ import { html, lrm } from "../../utils/html";
 import { isAdmin, permit } from "../../stores/user";
 import { config } from "../../utils/config";
 import type { ExtendedContext } from "../../typings/context";
-import fetch from "node-fetch";
 import { jspack } from "jspack";
 import { managesGroup } from "../../stores/group";
 import type { MessageEntity } from "telegraf/typings/telegram-types";
@@ -15,6 +14,7 @@ import { URL } from "url";
 import XRegExp = require("xregexp");
 
 const { excludeLinks = [], blacklistedDomains = [] } = config;
+const { fetch } = require('undici');
 
 if (excludeLinks === false) {
 	module.exports = (ctx, next) => next();
@@ -67,7 +67,7 @@ const actionPriority = (action: Action) => action.type;
 const maxByActionPriority = R.maxBy(actionPriority);
 const highestPriorityAction = R.reduce(maxByActionPriority, Action.Nothing);
 
-const assumeProtocol = R.unless(R.contains("://"), R.concat("http://"));
+const assumeProtocol = R.unless(R.includes("://"), R.concat("http://"));
 const isHttp = R.propSatisfies(R.test(/^https?:$/i), "protocol");
 const isLink = (entity: MessageEntity) =>
 	["url", "text_link", "mention"].includes(entity.type);
@@ -91,11 +91,14 @@ const isPublic = async (username: string) => {
 
 const inviteLinkToGroupID = (url: URL) => {
 	if (url.pathname.toLowerCase().startsWith("/joinchat/")) {
-		const [, groupID] = jspack.Unpack(
+		const res = jspack.Unpack(
 			">LLQ",
 			Buffer.from(url.pathname.split("/")[2], "base64")
 		);
-		return groupID;
+		if (Array.isArray(res)) {
+			const [, groupID] = res;
+			return groupID;
+		}
 	}
 	return null;
 };
@@ -115,7 +118,11 @@ const dh = {
 	tme: async (url: URL) => {
 		if (url.pathname === "/") return Action.Nothing;
 		if (url.pathname.toLowerCase().startsWith("/c/")) return Action.Nothing;
+		if (url.pathname.toLowerCase().startsWith("/addtheme/")) return Action.Nothing;
 		if (url.pathname.toLowerCase().startsWith("/addstickers/")) {
+			return Action.Nothing;
+		}
+		if (url.pathname.toLowerCase().startsWith("/setlanguage/")) {
 			return Action.Nothing;
 		}
 		if (url.searchParams.has("start")) return Action.Warn("Bot reflink");
@@ -155,7 +162,9 @@ const checkLinkByDomain = (url: URL) => {
 	return handler(url);
 };
 
-const classifyAsync = R.memoize(async (url: URL) => {
+const urlToKey = (url: URL) => url.toString();
+
+const classifyAsync = R.memoizeWith(urlToKey, async (url: URL) => {
 	if (isWhitelisted(url)) return Action.Nothing;
 
 	if (blacklisted.protocol(url)) return Action.Warn("Link using tg protocol");

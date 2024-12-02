@@ -5,7 +5,7 @@ const { chats = {} } = require('../../utils/config').config;
 function getUserLink(user) {
 	const lastName = user.last_name ? ` ${user.last_name}` : '';
 	const username = user.username ? ` @${user.username}` : '';
-	return `<a href="tg://user?id=${user.id}">${user.first_name}${lastName}${username}</a>`;
+	return `<a href="tg://user?id=${user.id}">${user.first_name}${lastName}${username}</a> [<code>${user.id}</code>]`;
 }
 
 function getId(user) {
@@ -15,7 +15,7 @@ function getId(user) {
 /** @param { import('../../typings/context').ExtendedContext } ctx */
 function log(ctx, next) {
 	if (!chats.presenceLog) return next();
-	if (ctx.updateSubTypes[0] === 'new_chat_members') {
+	if (ctx.message.new_chat_members) {
 		ctx.telegram
 			.sendMessage(
 				chats.presenceLog,
